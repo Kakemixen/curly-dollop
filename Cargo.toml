@@ -1,5 +1,6 @@
 [workspace]
 
 members = [
-	"star1"
+	"star1",
+	"star2"
 ]
