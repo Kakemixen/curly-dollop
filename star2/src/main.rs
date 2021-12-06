@@ -10,7 +10,7 @@ fn main() {
         x.parse::<i32>().expect("can't convert string to int")
     }).collect();
     let mut acc = 0;
-    for i in 1..arr.len()-3 {
+    for i in 1..arr.len()-2 {
         if trisum(&arr, i) > trisum(&arr, i-1) {
             acc += 1;
         }
