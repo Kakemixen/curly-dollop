@@ -1,6 +1,8 @@
 [workspace]
 
 members = [
+	"aoclib",
 	"star1",
-	"star2"
+	"star2",
+	"star3",
 ]
