@@ -121,3 +121,11 @@ dependencies = [
  "aoclib",
  "itertools",
 ]
+
+[[package]]
+name = "star4"
+version = "0.1.0"
+dependencies = [
+ "aoclib",
+ "itertools",
+]
