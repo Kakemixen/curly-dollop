@@ -1,5 +1,3 @@
-use std::process::exit;
-
 use aoclib::fileops;
 
 fn main() {
@@ -14,13 +12,27 @@ fn main() {
         }
     }
     println!("{:?}", bitsums);
-    println!("{}", length);
-    let most_common_bits: Vec<i32> = bitsums.iter().map(|x| {
+    let most_common_bits: Vec<u8> = bitsums.iter().map(|x| {
         if x >= &(length / 2) { 1 } else { 0 }
-    })
-    .collect();
+    }).collect();
+    let least_common_bits: Vec<u8> = bitsums.iter().map(|x| {
+        if x >= &(length / 2) { 0 } else { 1 }
+    }).collect();
     println!("{:?}", most_common_bits);
+    let gamma_rate = bitvec_to_num(&most_common_bits);
+    let epsilon_rate = bitvec_to_num(&least_common_bits);
+    println!("gamma {:b}", gamma_rate);
+    println!("epsilon {:b}", epsilon_rate);
+    println!("{}", gamma_rate as u64 * epsilon_rate as u64);
+}
 
+fn bitvec_to_num(bits: &[u8])
+    -> i32
+{
+    bits.iter().fold(0, |acc, x| {
+        let res = (acc << 1) + *x as i32;
+        res
+    })
 }
 
 fn line_to_vec(line: &str)
