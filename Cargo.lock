@@ -5,6 +5,9 @@ version = 3
 [[package]]
 name = "aoclib"
 version = "0.1.0"
+dependencies = [
+ "num",
+]
 
 [[package]]
 name = "autocfg"
@@ -132,6 +135,14 @@ dependencies = [
 
 [[package]]
 name = "star5"
+version = "0.1.0"
+dependencies = [
+ "aoclib",
+ "itertools",
+]
+
+[[package]]
+name = "star6"
 version = "0.1.0"
 dependencies = [
  "aoclib",

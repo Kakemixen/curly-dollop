@@ -15,3 +15,36 @@ pub mod fileops {
     }
 }
 
+pub mod bitops {
+
+    pub fn bitvec_to_num(bits: &[u8])
+        -> i32
+    {
+        bits.iter().fold(0, |acc, x| {
+            let res = (acc << 1) + *x as i32;
+            res
+        })
+    }
+
+    pub fn bitstr_to_vec(line: &str)
+        -> Vec<i32>
+    {
+        line.chars()
+            .map(|x| {
+                match x {
+                    '0' => 0,
+                    '1' => 1,
+                    _ => unreachable!(),
+                }
+            })
+            .collect()
+    }
+
+    pub fn bitstr_to_num(bitstr: &str)
+        -> i32
+    {
+        let vec: Vec<u8> = bitstr_to_vec(bitstr).iter()
+            .map(|x| { *x as u8 }).collect();
+        bitvec_to_num(&vec)
+    }
+}
