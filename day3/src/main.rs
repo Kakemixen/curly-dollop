@@ -3,18 +3,44 @@ use aoclib::{fileops,bitops};
 const NUM_BITS_IN_INPUT: i32 = 11;
 
 fn main() {
-    let lines: Vec<i32> = fileops::get_file_lines("input3.txt")
+    part1();
+    part2();
+}
+
+fn part1()
+    -> ()
+{
+    let mut lines = fileops::get_file_lines("input.txt");
+    let mut length = 1;
+    let mut bitsums: Vec<i32> = bitops::bitstr_to_vec(&lines.next().unwrap());
+    for line in lines {
+        length += 1;
+        let bits = bitops::bitstr_to_vec(&line);
+        for i in 0..bits.len() {
+            bitsums[i] += bits[i];
+        }
+    }
+    let most_common_bits: Vec<u8> = bitsums.iter().map(|x| {
+        if x >= &(length / 2) { 1 } else { 0 }
+    }).collect();
+    let least_common_bits: Vec<u8> = bitsums.iter().map(|x| {
+        if x >= &(length / 2) { 0 } else { 1 }
+    }).collect();
+    let gamma_rate = bitops::bitvec_to_num(&most_common_bits);
+    let epsilon_rate = bitops::bitvec_to_num(&least_common_bits);
+    println!("part1: {}", gamma_rate as u64 * epsilon_rate as u64);
+}
+
+fn part2()
+    -> ()
+{
+    let lines: Vec<i32> = fileops::get_file_lines("input.txt")
         .map(|x| {
             bitops::bitstr_to_num(&x)
         }).collect();
     let oxygen = do_filter(&lines, NUM_BITS_IN_INPUT, true);
-    println!("{:?}", oxygen);
-    println!("{:b}", oxygen[0]);
     let scrubber = do_filter(&lines, NUM_BITS_IN_INPUT, false);
-    println!();
-    println!("{:?}", scrubber);
-    println!("{:b}", scrubber[0]);
-    println!("{}", oxygen[0] * scrubber[0]);
+    println!("part2: {}", oxygen[0] * scrubber[0]);
 }
 
 fn do_filter(vec: &[i32], bit: i32, most_common: bool)
@@ -47,12 +73,10 @@ fn do_filter(vec: &[i32], bit: i32, most_common: bool)
     if bitsum == vec.len() as i32 {
         choice = 1;
     }
-    println!("{:12b}", choice << bit);
     let filtered: Vec<i32> = vec.iter()
             .filter(|&&x| { ((x >> bit) & 1) == choice })
             .map(|x| { *x }) //TODO why?
             .collect();
-    println!("{:12b}", filtered[0]);
     do_filter(
         &filtered,
         bit - 1,

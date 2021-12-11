@@ -1,7 +1,28 @@
 use std::fs;
-use num;
 
 fn main() {
+    part1();
+    part2();
+}
+
+fn part1 ()
+    -> ()
+{
+    let filename = "input.txt";
+    let contents = fs::read_to_string(filename).expect("can't read file");
+    let arr: Vec<&str> = contents.split("\n").collect();
+    let mut acc = 0;
+    for i in 1..arr.len()-1 {
+        if arr[i].parse::<i32>().unwrap() > arr[i-1].parse::<i32>().unwrap() {
+            acc += 1;
+        }
+    }
+    println!("part1: {}", acc);
+}
+
+fn part2()
+    -> ()
+{
     let filename = "input.txt";
     let contents = fs::read_to_string(filename).expect("can't read file");
     let arr = contents.split("\n")
@@ -15,7 +36,7 @@ fn main() {
             acc += 1;
         }
     }
-    println!("{}", acc);
+    println!("part2: {}", acc);
 }
 
 fn trisum<'a, T>(arr: &'a [T], start: usize) -> T

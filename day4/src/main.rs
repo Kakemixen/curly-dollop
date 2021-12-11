@@ -126,7 +126,7 @@ fn check_win(board: &mut BingoBoard)
 fn get_bingo_boards()
     -> (Vec<u32>, Vec<BingoBoard>)
 {
-    let mut lines = fileops::get_file_lines("input4.txt");
+    let mut lines = fileops::get_file_lines("input.txt");
     let numberdraws: Vec<u32> = lines.next().unwrap()
         .split(",")
         .map(|x| {
