@@ -148,3 +148,11 @@ dependencies = [
  "aoclib",
  "itertools",
 ]
+
+[[package]]
+name = "star7"
+version = "0.1.0"
+dependencies = [
+ "aoclib",
+ "itertools",
+]
