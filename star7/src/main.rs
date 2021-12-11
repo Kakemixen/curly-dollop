@@ -18,6 +18,8 @@ struct BingoBoard
 fn main() {
     let part1 = best_board_score();
     println!("part1: {}", part1);
+    let part2 = last_board_score();
+    println!("part2: {}", part2);
 }
 
 fn best_board_score()
@@ -34,6 +36,29 @@ fn best_board_score()
     let best = boards.iter().fold( &initial,
     |acc, b| {
         if b.winturn < acc.winturn {
+            b
+        } else {
+            acc
+        }
+    });
+
+    best.score
+}
+
+fn last_board_score()
+    -> u32
+{
+    let (draws, mut boards) = get_bingo_boards();
+    for board in &mut boards {
+        calculate_board_score(&draws, board).unwrap();
+    }
+
+    let initial = BingoBoard {
+        board: Vec::new(), score: 0, winturn: 0 as u32,
+    };
+    let best = boards.iter().fold( &initial,
+    |acc, b| {
+        if b.winturn > acc.winturn {
             b
         } else {
             acc
