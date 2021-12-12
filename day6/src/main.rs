@@ -12,11 +12,16 @@ fn part1()
 {
     let initial = parse_input();
     let population = grow_population(initial, 80);
+    println!("part1 {}", population.len());
 }
 
 fn part2()
     -> ()
-{ }
+{
+    let initial = parse_input();
+    let population = grow_population(initial, 256);
+    println!("part1 {}", population.len());
+}
 
 fn parse_input()
     -> Vec<usize>
@@ -33,8 +38,9 @@ fn parse_input()
 fn grow_population(mut population: Vec<usize>, steps: usize)
     -> Vec<usize>
 {
-    for _ in 0 .. steps {
+    for i in 0 .. steps {
         let old_len = population.len();
+        println!("{} - {}", i, old_len);
         for i in 0 .. old_len {
             if population[i] == 0 {
                 population.push(8);
