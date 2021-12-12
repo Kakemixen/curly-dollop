@@ -4,6 +4,7 @@ use std::cmp;
 
 fn main() {
     part1();
+    part2();
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +126,20 @@ fn part1()
         }));
 }
 
+fn part2()
+    -> ()
+{
+    let file_lines = fileops::get_file_lines("input.txt");
+    let lines = get_lines(file_lines, true);
+    let map = map_lines(lines);
+    println!("part1: {}", map.map.iter().fold(0, |acc, p| {
+            if *p > 1 {
+                return acc + 1;
+            }
+            acc
+        }));
+}
+
 fn map_lines(lines: Vec<Line>)
     -> Map
 {
@@ -227,6 +242,32 @@ mod tests {
                 acc
             });
         println!("part1: {}", score);
+        assert_eq!(score, 5);
+    }
+
+    #[test]
+    fn test_0x0003()
+    {
+        // test 5x5 grid where some lines are diagonal
+        let file = vec![
+            "0,0 -> 5,0",
+            "0,0 -> 5,5",
+            "0,3 -> 2,3",
+            "0,4 -> 4,0",
+            "2,5 -> 2,2",
+        ];
+        let file_lines = file.iter()
+            .map(|x| {x.to_string()});
+        let lines = get_lines(file_lines, true);
+        let map = map_lines(lines);
+        map.print();
+        let score = map.map.iter().fold(0, |acc, p| {
+                if *p > 1 {
+                    return acc + 1;
+                }
+                acc
+            });
+        println!("part2: {}", score);
         assert_eq!(score, 5);
     }
 }
