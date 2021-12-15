@@ -1,6 +1,4 @@
 use aoclib::fileops;
-use std::thread;
-use std::sync::mpsc;
 
 const HORIZON: usize = 100; //tuning parameter
 
@@ -61,48 +59,6 @@ fn create_lookup()
     vec
 }
 
-
-fn forecast_population(
-    population: Vec<u8>,
-    iterations: usize,
-    lookup:     &Vec<Vec<u8>>,
-)
-    -> usize
-{
-    return forecast_population_recursion(population, iterations, 0, lookup);
-}
-
-fn forecast_population_recursion(
-    population: Vec<u8>,
-    iterations:     usize,
-    current:        usize,
-    lookup:         &Vec<Vec<u8>>,
-)
-    -> usize
-{
-    if current == iterations {
-        return population.len();
-    }
-
-    let mut population_size = 0;
-
-    //for fish in population {
-    for i in 0..population.len() {
-        //if current == 0 {
-        //    println!("{:05}/{:5} : {:12}", i, population.len(), population_size);
-        //}
-        let fish = population[i];
-        population_size += forecast_population_recursion(
-                grow_population_lookup(vec![fish], 1, lookup),
-                iterations,
-                current + 1,
-                lookup,
-            );
-    }
-
-    population_size
-}
-
 fn grow_population_lookup(
     mut population: Vec<u8>,
     iterations: usize,
@@ -121,83 +77,91 @@ fn grow_population_lookup(
     population
 }
 
-fn grow_population_parallell(population: Vec<u8>, steps: usize)
-    -> Vec<u8>
+fn forecast_population(
+    population: Vec<u8>,
+    iterations: usize,
+    lookup:     &Vec<Vec<u8>>,
+)
+    -> usize
 {
-    let limit = 1000000;
-    let split = 4;
-
-    grow_population_parallell_impl(population, steps, split, 0, limit)
+    return forecast_population_recursion(population, iterations, 0, lookup);
 }
 
-fn grow_population_parallell_impl(
-        mut population: Vec<u8>,
-        steps:          usize,
-        split:          usize,
-        current:        usize,
-        limit:          usize,
+fn forecast_population_recursion(
+    population: Vec<u8>,
+    iterations: usize,
+    current:    usize,
+    lookup:     &Vec<Vec<u8>>,
 )
-    -> Vec<u8>
+    -> usize
 {
-    for i in current .. steps {
-        population = grow_population(population, 1);
+    if current == iterations {
+        return population.len();
+    }
 
-        if population.len() > limit {
-            return grow_population_parallell_split(
-                population,
-                steps,
-                split,
-                i,
-                limit*limit/4);
+    let mut population_size = 0;
+
+    //for fish in population {
+    for i in 0..population.len() {
+        if current == 0 {
+            println!("{:05}/{:5} : {:12}", i, population.len(), population_size);
         }
+        let fish = population[i];
+        population_size += forecast_population_recursion(
+                grow_population_lookup(vec![fish], 1, lookup),
+                iterations,
+                current + 1,
+                lookup,
+            );
     }
-    population
+
+    population_size
 }
 
-fn grow_population_parallell_split(
-        mut population: Vec<u8>,
-        steps:          usize,
-        split:          usize,
-        current:        usize,
-        limit:          usize,
-)
-    -> Vec<u8>
-{
-    let (tx, rx) = mpsc::channel::<Vec<u8>>();
-    let mut handles = Vec::new();
-
-    let size = population.len() / split;
-    println!("splitting at {}", current);
-
-    for i in 0 .. split {
-        let tx_clone = tx.clone();
-        let fishes = population[i*size .. (i+1)*size].to_vec();
-        handles.push(thread::spawn(move || {
-            let population = grow_population_parallell_impl(
-                fishes,
-                steps,
-                split,
-                current,
-                limit);
-            match tx_clone.send(population) {
-                Ok(_) => println!("worker done"),
-                Err(e) => println!("error: {}", e),
-            }
-        }));
-    }
-    population = Vec::new();
-
-    for handle in handles {
-        handle.join().unwrap();
-    }
-
-    while let Ok(fishes) = rx.try_recv() {
-        println!("{:?}",fishes);
-        population.extend(fishes);
-    }
-
-    population
-}
+//fn forecast_population_recursion_thread_split(
+//        mut population: Vec<u8>,
+//        steps:          usize,
+//        split:          usize,
+//        current:        usize,
+//        limit:          usize,
+//)
+//    -> Vec<u8>
+//{
+//    let (tx, rx) = mpsc::channel::<Vec<u8>>();
+//    let mut handles = Vec::new();
+//
+//    let size = population.len() / split;
+//    println!("splitting at {}", current);
+//
+//    for i in 0 .. split {
+//        let tx_clone = tx.clone();
+//        let fishes = population[i*size .. (i+1)*size].to_vec();
+//        handles.push(thread::spawn(move || {
+//            let population = grow_population_parallell_impl(
+//                fishes,
+//                steps,
+//                split,
+//                current,
+//                limit);
+//            match tx_clone.send(population) {
+//                Ok(_) => println!("worker done"),
+//                Err(e) => println!("error: {}", e),
+//            }
+//        }));
+//    }
+//    population = Vec::new();
+//
+//    for handle in handles {
+//        handle.join().unwrap();
+//    }
+//
+//    while let Ok(fishes) = rx.try_recv() {
+//        println!("{:?}",fishes);
+//        population.extend(fishes);
+//    }
+//
+//    population
+//}
 
 
 fn parse_input()
@@ -229,17 +193,6 @@ mod tests
     }
 
     #[test]
-    fn test_0x002()
-    {
-        let initial = vec![3,4,3,1,2];
-        let final_population = grow_population_parallell(initial, 18);
-        println!("{:?}", final_population);
-        assert_eq!(final_population.len(), 26);
-        let final_population = grow_population(final_population, 80-18);
-        assert_eq!(final_population.len(), 5934);
-    }
-
-    #[test]
     fn test_slice()
     {
         let vec = vec![1,2,3,4,5,6,7,8,9,10,11,12,13];
@@ -251,12 +204,15 @@ mod tests
         println!("{:?}", &vec[(split-1)*size .. vec.len()]);
     }
 
-    //#[test]
-    //fn test_0x003()
-    //{
-    //    let initial = vec![3,4,3,1,2];
-    //    let final_population = grow_population_parallell(initial, 256);
-    //    println!("{:?}", final_population);
-    //    assert_eq!(final_population.len(), 26984457539);
-    //}
+    #[test]
+    fn test_0x002()
+    {
+        let lookup = create_lookup();
+        let mut population = vec![3,4,3,1,2];
+        let total_steps = 256;
+        let first_steps = total_steps % HORIZON;
+        population = grow_population(population, first_steps);
+        let population_size = forecast_population(population, total_steps/HORIZON, &lookup);
+        assert_eq!(population_size, 26984457539);
+    }
 }
