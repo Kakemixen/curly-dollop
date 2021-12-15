@@ -2,43 +2,129 @@ use aoclib::fileops;
 use std::thread;
 use std::sync::mpsc;
 
+const HORIZON: usize = 100; //tuning parameter
+
 fn main() {
-    part1();
-    part2();
+    let lookup = create_lookup();
+    part1(&lookup);
+    part2(&lookup);
 }
 
-fn part1()
+fn part1(lookup:     &Vec<Vec<u8>>)
     -> ()
 {
-    let initial = parse_input();
-    let population = grow_population_parallell(initial, 80);
-    println!("part1 {}", population.len());
+    let total_steps = 80;
+    let mut population = parse_input();
+    let first_steps = total_steps % HORIZON;
+    population = grow_population(population, first_steps);
+    let population_size = forecast_population(population, total_steps/HORIZON, lookup);
+    println!("part1 {}", population_size);
 }
 
-fn part2()
+fn part2(lookup: &Vec<Vec<u8>>)
     -> ()
 {
-    let initial = parse_input();
-    let population = grow_population_parallell(initial, 256);
-    println!("part1 {}", population.len());
+    let total_steps = 256;
+    let mut population = parse_input();
+    let first_steps = total_steps % HORIZON;
+    population = grow_population(population, first_steps);
+    let population_size = forecast_population(population, total_steps/HORIZON, lookup);
+    println!("part2 {}", population_size);
 }
 
-fn parse_input()
+fn grow_population(mut population: Vec<u8>, steps: usize)
     -> Vec<u8>
 {
-    fileops::get_file_lines("input.txt")
-        .next().unwrap()
-        .split(",")
-        .map(|x| {
-            x.parse::<u8>().expect("not a number")
-        })
-        .collect()
+    for _ in 0 .. steps {
+        let old_len = population.len();
+        for i in 0 .. old_len {
+            if population[i] == 0 {
+                population.push(8);
+                population[i] = 6;
+            } else {
+                population[i] -= 1;
+            }
+        }
+    }
+    population
+}
+
+fn create_lookup()
+    -> Vec<Vec<u8>>
+{
+    let mut vec = Vec::new();
+    for i in 0 ..= 8 {
+        vec.push(
+            grow_population(vec![i], HORIZON)
+            );
+    }
+    vec
+}
+
+
+fn forecast_population(
+    population: Vec<u8>,
+    iterations: usize,
+    lookup:     &Vec<Vec<u8>>,
+)
+    -> usize
+{
+    return forecast_population_recursion(population, iterations, 0, lookup);
+}
+
+fn forecast_population_recursion(
+    population: Vec<u8>,
+    iterations:     usize,
+    current:        usize,
+    lookup:         &Vec<Vec<u8>>,
+)
+    -> usize
+{
+    if current == iterations {
+        return population.len();
+    }
+
+    let mut population_size = 0;
+
+    //for fish in population {
+    for i in 0..population.len() {
+        //if current == 0 {
+        //    println!("{:05}/{:5} : {:12}", i, population.len(), population_size);
+        //}
+        let fish = population[i];
+        population_size += forecast_population_recursion(
+                grow_population_lookup(vec![fish], 1, lookup),
+                iterations,
+                current + 1,
+                lookup,
+            );
+    }
+
+    population_size
+}
+
+fn grow_population_lookup(
+    mut population: Vec<u8>,
+    iterations: usize,
+    lookup:     &Vec<Vec<u8>>,
+)
+    -> Vec<u8>
+{
+    let mut tmp = Vec::new();
+    for _ in 0..iterations {
+        for fish in population {
+            tmp.extend(&lookup[fish as usize].to_vec());
+        }
+        population = tmp;
+        tmp = Vec::new();
+    }
+    population
 }
 
 fn grow_population_parallell(population: Vec<u8>, steps: usize)
     -> Vec<u8>
 {
-    let limit = 500000;
+    let limit = 1000000;
     let split = 4;
 
     grow_population_parallell_impl(population, steps, split, 0, limit)
@@ -53,9 +139,6 @@ fn grow_population_parallell_impl(
 )
     -> Vec<u8>
 {
-    let limit = 10000000;
-    let split = 4;
-
     for i in current .. steps {
         population = grow_population(population, 1);
 
@@ -65,7 +148,7 @@ fn grow_population_parallell_impl(
                 steps,
                 split,
                 i,
-                limit);
+                limit*limit/4);
         }
     }
     population
@@ -116,21 +199,17 @@ fn grow_population_parallell_split(
     population
 }
 
-fn grow_population(mut population: Vec<u8>, steps: usize)
+
+fn parse_input()
     -> Vec<u8>
 {
-    for _ in 0 .. steps {
-        let old_len = population.len();
-        for i in 0 .. old_len {
-            if population[i] == 0 {
-                population.push(8);
-                population[i] = 6;
-            } else {
-                population[i] -= 1;
-            }
-        }
-    }
-    population
+    fileops::get_file_lines("input.txt")
+        .next().unwrap()
+        .split(",")
+        .map(|x| {
+            x.parse::<u8>().expect("not a number")
+        })
+        .collect()
 }
 
 #[cfg(test)]
