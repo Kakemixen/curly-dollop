@@ -1,14 +1,19 @@
-use aoclib::fileops;
+use aoclib::{fileops, threadpool};
+use std::sync::{
+    Arc, Mutex,
+};
 
 const HORIZON: usize = 100; //tuning parameter
 
+type LookupTable = Arc<Mutex<Vec<Vec<u8>>>>;
+
 fn main() {
     let lookup = create_lookup();
-    part1(&lookup);
-    part2(&lookup);
+    part1(Arc::clone(&lookup));
+    part2(Arc::clone(&lookup));
 }
 
-fn part1(lookup:     &Vec<Vec<u8>>)
+fn part1(lookup: LookupTable)
     -> ()
 {
     let total_steps = 80;
@@ -19,7 +24,7 @@ fn part1(lookup:     &Vec<Vec<u8>>)
     println!("part1 {}", population_size);
 }
 
-fn part2(lookup: &Vec<Vec<u8>>)
+fn part2(lookup: LookupTable)
     -> ()
 {
     let total_steps = 256;
@@ -48,11 +53,11 @@ fn grow_population(mut population: Vec<u8>, steps: usize)
 }
 
 fn create_lookup()
-    -> Vec<Vec<u8>>
+    -> Arc<Mutex<Vec<Vec<u8>>>>
 {
-    let mut vec = Vec::new();
+    let vec = Arc::new(Mutex::new(Vec::new()));
     for i in 0 ..= 8 {
-        vec.push(
+        vec.lock().unwrap().push(
             grow_population(vec![i], HORIZON)
             );
     }
@@ -62,14 +67,14 @@ fn create_lookup()
 fn grow_population_lookup(
     mut population: Vec<u8>,
     iterations: usize,
-    lookup:     &Vec<Vec<u8>>,
+    lookup:     LookupTable,
 )
     -> Vec<u8>
 {
     let mut tmp = Vec::new();
     for _ in 0..iterations {
         for fish in population {
-            tmp.extend(&lookup[fish as usize].to_vec());
+            tmp.extend(&lookup.lock().expect("poisoned lookuptable!")[fish as usize].to_vec());
         }
         population = tmp;
         tmp = Vec::new();
@@ -80,18 +85,55 @@ fn grow_population_lookup(
 fn forecast_population(
     population: Vec<u8>,
     iterations: usize,
-    lookup:     &Vec<Vec<u8>>,
+    lookup:     LookupTable,
 )
     -> usize
 {
-    return forecast_population_recursion(population, iterations, 0, lookup);
+    //return forecast_population_recursion(population, iterations, 0, lookup);
+    return forecast_population_recursion_thread_split(population, iterations, lookup);
+}
+
+struct ThreadPoolInput
+{
+        fish: u8, 
+        iterations: usize, 
+        current: usize, 
+        lookup: LookupTable,
+}
+
+fn forecast_population_recursion_thread_split(
+    population: Vec<u8>,
+    iterations: usize,
+    lookup:     LookupTable,
+)
+    -> usize
+{
+    let current = 0;
+    let threadpool = threadpool::ThreadPool::new(8);
+    let mut population_size = 0;
+    let func = | thread_input: Box<ThreadPoolInput> | {
+        forecast_population_recursion(
+            grow_population_lookup(vec![thread_input.fish], 1, Arc::clone(&thread_input.lookup)),
+            thread_input.iterations,
+            thread_input.current + 1,
+            thread_input.lookup,
+        )
+    };
+
+    for i in 0..population.len() {
+        println!("{:05}/{:5} : {:12}", i, population.len(), population_size);
+        let fish = population[i];
+        let fish_input = ThreadPoolInput { fish, iterations, current, lookup: Arc::clone(&lookup) };
+        population_size += threadpool.execute(func, fish_input).recv().unwrap();
+    }
+    population_size
 }
 
 fn forecast_population_recursion(
     population: Vec<u8>,
     iterations: usize,
     current:    usize,
-    lookup:     &Vec<Vec<u8>>,
+    lookup:     LookupTable,
 )
     -> usize
 {
@@ -108,10 +150,10 @@ fn forecast_population_recursion(
         }
         let fish = population[i];
         population_size += forecast_population_recursion(
-                grow_population_lookup(vec![fish], 1, lookup),
+                grow_population_lookup(vec![fish], 1, Arc::clone(&lookup)),
                 iterations,
                 current + 1,
-                lookup,
+                Arc::clone(&lookup),
             );
     }
 
@@ -212,7 +254,7 @@ mod tests
         let total_steps = 256;
         let first_steps = total_steps % HORIZON;
         population = grow_population(population, first_steps);
-        let population_size = forecast_population(population, total_steps/HORIZON, &lookup);
+        let population_size = forecast_population(population, total_steps/HORIZON, lookup);
         assert_eq!(population_size, 26984457539);
     }
 }

@@ -1,3 +1,5 @@
+pub mod threadpool;
+
 pub mod fileops {
     use std::fs::File;
     use std::path::Path;
