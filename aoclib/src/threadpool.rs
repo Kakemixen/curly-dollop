@@ -3,34 +3,38 @@ use std::sync::{
     mpsc, Arc, Mutex,
 };
 
-
-pub fn hello()
-    -> ()
-{
-    println!("threadpool hello");
-}
-
 type Job = Box<dyn FnOnce() + Send + 'static>;
+
+enum Message
+{
+    NewJob(Job),
+    Terminate,
+}
 
 struct Worker
 {
     id: usize,
     //should join somewhere
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker
 {
-    fn new(id: usize, reciever: Arc<Mutex<mpsc::Receiver<Job>>>)
+    fn new(id: usize, reciever: Arc<Mutex<mpsc::Receiver<Message>>>)
         -> Worker
     {
-        // TODO use reciever in thread
-        let thread = thread::spawn(move || loop { 
-            let job = reciever.lock().expect("poisoned reciever")
-                .recv().expect("no dispatcher");
-            job();
-        });
-        Worker { id, thread }
+        let thread = thread::Builder::new()
+            .name(format!("threadpool worker {}", id))
+            .spawn(move || loop { 
+                let message = reciever.lock().expect("poisoned reciever")
+                    .recv().expect("no dispatcher");
+                match message {
+                    Message::NewJob(job) => job(),
+                    Message::Terminate => break,
+                }
+
+        }).unwrap();
+        Worker { id, thread: Some(thread) }
     }
 }
 
@@ -38,7 +42,7 @@ impl Worker
 pub struct ThreadPool
 {
     workers: Vec<Worker>,
-    dispatcher: mpsc::Sender<Job>,
+    dispatcher: mpsc::Sender<Message>,
 }
 
 impl ThreadPool
@@ -69,20 +73,41 @@ impl ThreadPool
         let input_box = Box::new(input);
         let job = Box::new(f);
         let (tx, rx) = mpsc::channel();
+        //println!("scheduling");
 
         if self.workers.len() == 0 {
+            println!("no workers");
             let out = job(input_box);
             tx.send(out).expect("no reciever for pool job!");
             return rx;
         }
 
-        self.dispatcher.send(Box::new( move || { 
-            let out = job(input_box);
-            tx.send(out).expect("no reciever for pool job!");
-        })).unwrap();
+        self.dispatcher.send(Message::NewJob(
+            Box::new( move || { 
+                //println!("dispatching");
+                let out = job(input_box);
+                tx.send(out).expect("no reciever for pool job!");
+            })
+        )).unwrap();
 
-        //tx.send(job(input)).unwrap();
         rx
+    }
+}
+
+impl Drop for ThreadPool
+{
+    fn drop(&mut self) {
+
+        for _ in &mut self.workers {
+            self.dispatcher.send(Message::Terminate).unwrap();
+        }
+
+        for worker in &mut self.workers {
+            if let Some(thread) = worker.thread.take() {
+                thread.join()
+                    .expect(&format!("can't join thread {}", worker.id));
+            }
+        }
     }
 }
 
@@ -164,6 +189,29 @@ mod test
         let reciever = pool.execute(func, input);
         assert!(now.elapsed() <= time::Duration::from_millis(10));
         assert_eq!(reciever.recv().unwrap(), 5);
+        assert!(now.elapsed() >= time::Duration::from_millis(10));
+    }
+
+    #[test]
+    /// test return value of threaded pool is correct
+    /// actually use more threads
+    fn test_0x005()
+    {
+        let pool = ThreadPool::new(5);
+        let func = | _ | {
+            thread::sleep(time::Duration::from_millis(10));
+            5
+        };
+        let now = time::Instant::now();
+
+        let mut recievers = Vec::with_capacity(5);
+        for _ in 0..5 {
+            recievers.push(pool.execute(func, ()));
+        }
+        assert!(now.elapsed() <= time::Duration::from_millis(10));
+        for reciever in recievers {
+            assert_eq!(reciever.recv().unwrap(), 5);
+        }
         assert!(now.elapsed() >= time::Duration::from_millis(10));
     }
 }
