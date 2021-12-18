@@ -1,9 +1,12 @@
 use aoclib::{fileops, threadpool};
+use std::ops::AddAssign;
 use std::sync::{
     Arc, Mutex,
 };
+use std::time;
 
-const HORIZON: usize = 100; //tuning parameter
+//const HORIZON: usize = 78; //tuning parameter
+const HORIZON: usize = 120; //tuning parameter
 
 type LookupTable = Arc<Mutex<Vec<Vec<u8>>>>;
 
@@ -27,12 +30,14 @@ fn part1(lookup: LookupTable)
 fn part2(lookup: LookupTable)
     -> ()
 {
+    let now = time::Instant::now();
     let total_steps = 256;
     let mut population = parse_input();
     let first_steps = total_steps % HORIZON;
     population = grow_population(population, first_steps);
     let population_size = forecast_population(population, total_steps/HORIZON, lookup);
     println!("part2 {}", population_size);
+    println!("part2 time {}", now.elapsed().as_secs());
 }
 
 fn grow_population(mut population: Vec<u8>, steps: usize)
@@ -89,18 +94,14 @@ fn forecast_population(
 )
     -> usize
 {
-    //return forecast_population_recursion(population, iterations, 0, lookup);
-    return forecast_population_recursion_thread_split(population, iterations, lookup);
+    // runs in two minutes with HORIZON=120
+    return forecast_population_recursion(population, iterations, 0, lookup);
+
+    // cant run with more than 80 horizon, cus stackoverflow. is slower
+    //return forecast_population_recursion_thread_split(population, iterations, lookup);
 }
 
-struct ThreadPoolInput
-{
-        fish: u8, 
-        iterations: usize, 
-        current: usize, 
-        lookup: LookupTable,
-}
-
+#[allow(unused)]
 fn forecast_population_recursion_thread_split(
     population: Vec<u8>,
     iterations: usize,
@@ -108,25 +109,32 @@ fn forecast_population_recursion_thread_split(
 )
     -> usize
 {
+    assert!(HORIZON < 80); // because of issues with thread stackoverflow
     let current = 0;
-    let threadpool = threadpool::ThreadPool::new(8);
-    let mut population_size = 0;
-    let func = | thread_input: Box<ThreadPoolInput> | {
-        forecast_population_recursion(
-            grow_population_lookup(vec![thread_input.fish], 1, Arc::clone(&thread_input.lookup)),
-            thread_input.iterations,
-            thread_input.current + 1,
-            thread_input.lookup,
-        )
-    };
+    let population_size = Arc::new(Mutex::new(0));
+    { // scope for threadpool
+        let threadpool = threadpool::ThreadPool::new(42);
 
-    for i in 0..population.len() {
-        println!("{:05}/{:5} : {:12}", i, population.len(), population_size);
-        let fish = population[i];
-        let fish_input = ThreadPoolInput { fish, iterations, current, lookup: Arc::clone(&lookup) };
-        population_size += threadpool.execute(func, fish_input).recv().unwrap();
+        for i in 0..population.len() {
+            let fish = population[i];
+            let iters = iterations.clone();
+            let next = current + 1;
+            let lookup_clone = Arc::clone(&lookup);
+            let population_size_clone = Arc::clone(&population_size);
+            let func = move | | {
+                let ret = forecast_population_recursion(
+                    grow_population_lookup(vec![fish], 1, Arc::clone(&lookup_clone)),
+                    iters,
+                    next,
+                    lookup_clone,
+                );
+                population_size_clone.lock().expect("cannot update popsize").add_assign(ret);
+            };
+            threadpool.execute(func);
+        }
     }
-    population_size
+    let x = population_size.lock().expect("can't return population_size").to_owned();
+    x
 }
 
 fn forecast_population_recursion(
@@ -145,9 +153,6 @@ fn forecast_population_recursion(
 
     //for fish in population {
     for i in 0..population.len() {
-        if current == 0 {
-            println!("{:05}/{:5} : {:12}", i, population.len(), population_size);
-        }
         let fish = population[i];
         population_size += forecast_population_recursion(
                 grow_population_lookup(vec![fish], 1, Arc::clone(&lookup)),
@@ -228,22 +233,9 @@ mod tests
     {
         let initial = vec![3,4,3,1,2];
         let final_population = grow_population(initial, 18);
-        println!("{:?}", final_population);
         assert_eq!(final_population.len(), 26);
         let final_population = grow_population(final_population, 80-18);
         assert_eq!(final_population.len(), 5934);
-    }
-
-    #[test]
-    fn test_slice()
-    {
-        let vec = vec![1,2,3,4,5,6,7,8,9,10,11,12,13];
-        let split = 4;
-        let size = vec.len() / split;
-        for i in 0 .. split-1{
-            println!("{:?}", &vec[i*size .. (i+1)*size]);
-        }
-        println!("{:?}", &vec[(split-1)*size .. vec.len()]);
     }
 
     #[test]
