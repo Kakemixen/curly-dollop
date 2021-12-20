@@ -37,14 +37,14 @@ fn parse_lines(lines: impl Iterator<Item = String>)
 }
 
 fn find_lowest_points(map: &Array2<usize>)
-    -> Array2<usize>
+    -> Vec<(usize, usize)>
 {
-    let mut lowest_map = Array::zeros(map.raw_dim());
+    let mut lowest_map = Vec::new();
     for (index, _) in map.indexed_iter() {
         let lowest = is_lowest(map, index);
         //println!("{:?} - lowest: {}", index, lowest);
         if lowest {
-            lowest_map[index] = 1;
+            lowest_map.push(index);
         }
     }
 
@@ -82,10 +82,14 @@ fn is_lowest(map: &Array2<usize>, pos: (usize, usize))
     true
 }
 
-fn calc_risk(map: &Array2<usize>, lowest_points: &Array2<usize>)
+fn calc_risk(map: &Array2<usize>, lowest_points: &Vec<(usize,usize)>)
     -> usize
 {
-    (map * lowest_points).sum() as usize + lowest_points.sum() as usize
+    let mut lowest_map:Array2<usize> = Array2::zeros(map.raw_dim());
+    for idx in lowest_points {
+        lowest_map[*idx] = 1;
+    }
+    (map * &lowest_map).sum() as usize + lowest_map.sum() as usize
 }
 
 #[cfg(test)]
@@ -123,16 +127,8 @@ mod tests
     {
         let input = get_test_input();
         let lowest_points = find_lowest_points(&input);
-        assert_eq!(lowest_points.ndim(), 2);
-        assert_eq!(lowest_points.shape(), [5,10]);
-        assert_eq!(lowest_points,
-                   arr2(&[
-                        [0,1,0,0,0,0,0,0,0,1],
-                        [0,0,0,0,0,0,0,0,0,0],
-                        [0,0,1,0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,1,0,0,0]
-                   ]));
+        assert_eq!(lowest_points.len(), 4);
+        assert_eq!(lowest_points, vec![(0,1), (0,9), (2,2), (4,6)]);
     }
 
     #[test]
