@@ -20,6 +20,8 @@ fn part2()
 #[cfg(test)]
 mod tests
 {
+    use super::*;
+
     #[test]
     fn test_0x0001()
     {
