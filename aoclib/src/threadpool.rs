@@ -141,7 +141,7 @@ mod test
         let (transmitter, reciever) = mpsc::channel();
         let func = move | | {
             thread::sleep(time::Duration::from_millis(10));
-            transmitter.send(a + b);
+            transmitter.send(a + b).unwrap();
         };
         let now = time::Instant::now();
 

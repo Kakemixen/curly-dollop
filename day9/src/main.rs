@@ -1,4 +1,4 @@
-use aoclib::fileops;
+use aoclib::gridops;
 use itertools::Itertools;
 use ndarray::prelude::*;
 use std::collections::VecDeque;
@@ -11,8 +11,7 @@ fn main() {
 fn part1()
     -> ()
 {
-    let input = fileops::get_file_lines("input.txt");
-    let map = parse_lines(input);
+    let map = gridops::read_file_grid("input.txt");
     let lowest_points = find_lowest_points(&map);
     let risk_sum = calc_risk(&map, &lowest_points);
     println!("part1 {}", risk_sum);
@@ -21,25 +20,11 @@ fn part1()
 fn part2()
     -> ()
 {
-    let input = fileops::get_file_lines("input.txt");
-    let map = parse_lines(input);
+    let map = gridops::read_file_grid("input.txt");
     let lowest_points = find_lowest_points(&map);
     let basins = find_basins(&map, &lowest_points);
     let basin_score = calc_biggest_basin_prod(&basins);
     println!("part2 {}", basin_score);
-}
-
-fn parse_lines(lines: impl Iterator<Item = String>)
-    -> Array2<usize>
-{
-    let rows: Vec<Vec<usize>> = lines.map(|x| {
-            x.chars().map(|c| { c.to_digit(10).unwrap() as usize })
-                .collect()
-        }).collect();
-    let h = rows.len();
-    let w = rows[0].len();
-    let rows = rows.concat();
-    Array2::from_shape_vec((h,w), rows).expect("err")
 }
 
 fn find_lowest_points(map: &Array2<usize>)
@@ -59,56 +44,13 @@ fn find_lowest_points(map: &Array2<usize>)
 fn is_lowest(map: &Array2<usize>, pos: (usize, usize))
     -> bool
 {
-    let h = pos.0 as i32;
-    let w = pos.1 as i32;
-
-    for h in h-1..=h+1 {
-        if h as usize == pos.0
-            || h < 0
-            || h as usize >= map.dim().0 {
-            continue;
-        }
-        if map[pos] >= map[(h as usize,pos.1)] {
-            return false;
-        }
-    }
-    for w in w-1..=w+1 {
-        if w as usize == pos.1
-            || w < 0
-            || w as usize >= map.dim().1 {
-            continue;
-        }
-        if map[pos] >= map[(pos.0,w as usize)] {
+    let adjecents = gridops::find_adjecents(map, pos);
+    for adjecent in adjecents {
+        if map[adjecent] <= map[pos] {
             return false;
         }
     }
     true
-}
-
-fn find_adjecents(map: &Array2<usize>, pos: (usize, usize))
-    -> Vec<(usize,usize)>
-{
-    let h = pos.0 as i32;
-    let w = pos.1 as i32;
-    let mut adjecents = Vec::new();
-
-    for h in h-1..=h+1 {
-        if h as usize == pos.0
-            || h < 0
-            || h as usize >= map.dim().0 {
-            continue;
-        }
-        adjecents.push((h as usize, pos.1));
-    }
-    for w in w-1..=w+1 {
-        if w as usize == pos.1
-            || w < 0
-            || w as usize >= map.dim().1 {
-            continue;
-        }
-        adjecents.push((pos.0,w as usize));
-    }
-    adjecents
 }
 
 fn find_basins(map: &Array2<usize>, lowest_points: &Vec<(usize, usize)>)
@@ -129,7 +71,7 @@ fn expand_basin(map: &Array2<usize>
 {
     while let Some(point) = horizon.pop_front() {
         total.push(point);
-        for adjecent in find_adjecents(map, point) {
+        for adjecent in gridops::find_adjecents(map, point) {
             if map[adjecent] != 9
                 && !total.contains(&adjecent)
                 && !horizon.contains(&adjecent)
@@ -169,8 +111,7 @@ mod tests
     fn get_test_input()
         -> Array2<usize>
     {
-        let lines = fileops::get_file_lines("test_input.txt");
-        parse_lines(lines)
+        gridops::read_file_grid("test_input.txt")
     }
 
     #[test]

@@ -153,7 +153,6 @@ fn find_configuration(uniques: &Vec<Digit>)
     let mut four = Vec::new();
 
     for unique in uniques {
-        let is_easy = UNIQUE_NUM_SEGMENTS.contains(&unique.segments.len());
         match unique.segments.len()
         {
             2 => {

@@ -1,4 +1,5 @@
 pub mod threadpool;
+pub mod gridops;
 
 pub mod fileops {
     use std::fs::File;
