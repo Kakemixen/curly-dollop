@@ -60,19 +60,16 @@ pub fn find_sorounding(grid: &Array2<usize>, pos: (usize, usize))
     let mut sorounding = Vec::new();
 
     for h in h-1..=h+1 {
-        println!("h:{}",h);
         if h < 0
             || h as usize >= grid.dim().0 {
             continue;
         }
         for w in w-1..=w+1 {
-            println!("h:{} w:{}", h, w);
             if (w as usize == pos.1 && h as usize == pos.0)
                 || w < 0
                 || w as usize >= grid.dim().1 {
                 continue;
             }
-            println!("pushing {:?}", (h as usize, w as usize));
             sorounding.push((h as usize, w as usize));
         }
     }
