@@ -20,7 +20,13 @@ fn part1()
 fn part2()
     -> ()
 {
-    println!("part2 {}", "TODO");
+    let mut grid = gridops::read_file_grid("input.txt");
+    let mut i = 0;
+    while grid != Array2::zeros((10,10)) {
+        simulate_step(&mut grid);
+        i += 1;
+    }
+    println!("part2 {}", i);
 }
 
 fn simulate_step(grid: &mut Array2<usize>)
@@ -30,7 +36,6 @@ fn simulate_step(grid: &mut Array2<usize>)
         *value += 1;
     }
 
-    println!("step");
     let who_flashed = flash(grid, vec![]);
 
     for flasher in &who_flashed {
@@ -47,11 +52,8 @@ fn flash(grid: &mut Array2<usize>
     let mut someone_flashed = false;
     let mut new_flashers = Vec::new();
 
-    println!();
-    println!("{:?}", grid);
     for (idx, value) in grid.indexed_iter() {
         if *value > 9 && !who_flashed.contains(&idx) {
-            println!("flasher: {:?}", idx);
             new_flashers.push(idx);
             someone_flashed = true;
         }
@@ -100,5 +102,17 @@ mod tests
             flashes += simulate_step(&mut grid);
         }
         assert_eq!(flashes, 1656);
+    }
+
+    #[test]
+    /// test synchronizing assumption in text
+    fn test_0x0003()
+    {
+        let mut grid = gridops::read_file_grid("test_input.txt");
+        let mut flashes = 0;
+        for _ in 0..195 {
+            flashes += simulate_step(&mut grid);
+        }
+        assert_eq!(grid, Array2::zeros((10,10)));
     }
 }
